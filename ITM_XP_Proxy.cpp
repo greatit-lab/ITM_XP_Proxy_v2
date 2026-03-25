@@ -17,7 +17,7 @@ const char* TARGET_IP = "10.172.111.93";
 const int MAX_CONNECTIONS = 50;
 volatile LONG activeConnections = 0;
 
-const std::streampos MAX_LOG_SIZE = 2 * 1024 * 1024; 
+const std::streampos MAX_LOG_SIZE = 2 * 1024 * 1024;
 
 CRITICAL_SECTION logMutex;
 
@@ -38,31 +38,32 @@ std::string MaskIP(const std::string& ip) {
 // rename 및 open 실패를 감지하고 안전하게 넘기는 로깅 함수
 void WriteLog(const std::string& msg) {
     EnterCriticalSection(&logMutex);
-    
+
     std::ofstream logFile("Proxy_Log.txt", std::ios_base::app | std::ios_base::ate);
-    
+
     char dt[64];
     time_t now = time(0);
     struct tm timeinfo;
-    localtime_s(&timeinfo, &now); 
+    localtime_s(&timeinfo, &now);
     strftime(dt, sizeof(dt), "%Y-%m-%d %H:%M:%S", &timeinfo);
 
     if (logFile.is_open()) {
         if (logFile.tellp() > MAX_LOG_SIZE) {
-            logFile.close(); 
-            
-            remove("Proxy_Log.bak"); 
+            logFile.close();
+
+            remove("Proxy_Log.bak");
             // 파일 락(Lock) 등으로 인해 백업 파일 이름 변경이 실패했는지 확인
             if (rename("Proxy_Log.txt", "Proxy_Log.bak") != 0) {
                 std::cout << "[" << dt << "] [Warning] Failed to rename log file for backup." << std::endl;
             }
-            
+
             // 새 로그 파일 열기
-            logFile.open("Proxy_Log.txt", std::ios_base::out | std::ios_base::trunc); 
+            logFile.open("Proxy_Log.txt", std::ios_base::out | std::ios_base::trunc);
             // 디스크 풀, 권한 오류 등으로 새 파일을 만들지 못했는지 확인
             if (logFile.is_open()) {
                 logFile << "[" << dt << "] === Log file rotated (Previous log saved as Proxy_Log.bak) ===" << std::endl;
-            } else {
+            }
+            else {
                 std::cout << "[" << dt << "] [Error] Failed to create new log file." << std::endl;
             }
         }
@@ -71,13 +72,14 @@ void WriteLog(const std::string& msg) {
         if (logFile.is_open()) {
             logFile << "[" << dt << "] " << msg << std::endl;
         }
-        std::cout << "[" << dt << "] " << msg << std::endl; 
-    } else {
+        std::cout << "[" << dt << "] " << msg << std::endl;
+    }
+    else {
         // 처음부터 파일을 열지 못한 경우 (권한 부족 등) 콘솔에만 출력
         std::cout << "[" << dt << "] [Error] Cannot open Proxy_Log.txt for writing." << std::endl;
-        std::cout << "[" << dt << "] " << msg << std::endl; 
+        std::cout << "[" << dt << "] " << msg << std::endl;
     }
-    
+
     LeaveCriticalSection(&logMutex);
 }
 
@@ -88,8 +90,9 @@ bool SendAll(SOCKET sock, const char* buffer, int length, int& outErrorCode) {
         if (sent == SOCKET_ERROR) {
             outErrorCode = WSAGetLastError();
             return false;
-        } else if (sent == 0) {
-            outErrorCode = WSAECONNABORTED; 
+        }
+        else if (sent == 0) {
+            outErrorCode = WSAECONNABORTED;
             return false;
         }
         totalSent += sent;
@@ -100,15 +103,15 @@ bool SendAll(SOCKET sock, const char* buffer, int length, int& outErrorCode) {
 
 bool ConnectWithTimeout(SOCKET sock, sockaddr_in& targetAddr, int timeoutSeconds, int& outErrorCode) {
     unsigned long iMode = 1;
-    ioctlsocket(sock, FIONBIO, &iMode); 
+    ioctlsocket(sock, FIONBIO, &iMode);
 
     int res = connect(sock, (SOCKADDR*)&targetAddr, sizeof(targetAddr));
     
     if (res == 0) {
         outErrorCode = 0;
-        iMode = 0; ioctlsocket(sock, FIONBIO, &iMode); 
+        iMode = 0; ioctlsocket(sock, FIONBIO, &iMode);
         return true;
-    } 
+    }
     else if (res == SOCKET_ERROR) {
         int err = WSAGetLastError();
         if (err != WSAEWOULDBLOCK) {
@@ -126,7 +129,7 @@ bool ConnectWithTimeout(SOCKET sock, sockaddr_in& targetAddr, int timeoutSeconds
     tv.tv_sec = timeoutSeconds; tv.tv_usec = 0;
 
     res = select(0, NULL, &Write, &Err, &tv);
-    
+
     iMode = 0;
     ioctlsocket(sock, FIONBIO, &iMode);
 
@@ -134,31 +137,35 @@ bool ConnectWithTimeout(SOCKET sock, sockaddr_in& targetAddr, int timeoutSeconds
         if (FD_ISSET(sock, &Err)) {
             int so_error = 0; int len = sizeof(so_error);
             if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&so_error, &len) == 0) {
-                outErrorCode = so_error; 
-            } else {
+                outErrorCode = so_error;
+            }
+            else {
                 outErrorCode = WSAGetLastError();
             }
             return false;
         }
-        
+
         if (FD_ISSET(sock, &Write)) {
             int so_error = 0; int len = sizeof(so_error);
             if (getsockopt(sock, SOL_SOCKET, SO_ERROR, (char*)&so_error, &len) == 0) {
                 if (so_error == 0) {
                     outErrorCode = 0;
-                    return true; 
+                    return true;
                 }
                 outErrorCode = so_error;
-            } else {
+            }
+            else {
                 outErrorCode = WSAGetLastError();
             }
         }
-    } else if (res == 0) {
-        outErrorCode = WSAETIMEDOUT; 
-    } else {
-        outErrorCode = WSAGetLastError(); 
     }
-    return false; 
+    else if (res == 0) {
+        outErrorCode = WSAETIMEDOUT; 
+    }
+    else {
+        outErrorCode = WSAGetLastError();
+    }
+    return false;
 }
 
 unsigned __stdcall ProxyWorker(void* lpParam) {
@@ -220,15 +227,16 @@ unsigned __stdcall ProxyWorker(void* lpParam) {
         FD_SET(clientSocket, &readSet);
         FD_SET(targetSocket, &readSet);
 
-        tv.tv_sec = 60;  
+        tv.tv_sec = 60;
         tv.tv_usec = 0;
 
         int ret = select(0, &readSet, NULL, NULL, &tv);
-        
+
         if (ret == 0) {
             WriteLog("Connection closed due to 60s inactivity timeout.");
-            break; 
-        } else if (ret < 0) {
+            break;
+        }
+        else if (ret < 0) {
             WriteLog("Select error occurred: " + std::to_string(WSAGetLastError()));
             break;
         }
@@ -240,10 +248,10 @@ unsigned __stdcall ProxyWorker(void* lpParam) {
                 if (bytesRead == 0) {
                     // 정상 종료 로그 출력 방지 (No news is good news)
                     // WriteLog("Client closed the connection gracefully.");
-                } 
+                }
                 else if (err == WSAETIMEDOUT) {
                     WriteLog("Client recv() timeout (SO_RCVTIMEO triggered).");
-                } 
+                }
                 else {
                     WriteLog("Client connection dropped. Err: " + std::to_string(err));
                 }
@@ -263,10 +271,10 @@ unsigned __stdcall ProxyWorker(void* lpParam) {
                 if (bytesRead == 0) {
                     // 정상 종료 로그 출력 방지 (No news is good news)
                     // WriteLog("Target server closed the connection gracefully.");
-                } 
+                }
                 else if (err == WSAETIMEDOUT) {
                     WriteLog("Target recv() timeout (SO_RCVTIMEO triggered).");
-                } 
+                }
                 else {
                     WriteLog("Target connection dropped. Err: " + std::to_string(err));
                 }
@@ -284,7 +292,7 @@ unsigned __stdcall ProxyWorker(void* lpParam) {
     shutdown(targetSocket, SD_BOTH);
     closesocket(clientSocket);
     closesocket(targetSocket);
-    
+
     InterlockedDecrement(&activeConnections);
     return 0;
 }
@@ -311,13 +319,13 @@ unsigned __stdcall StartListener(void* lpParam) {
         closesocket(listenSocket);
         return 0;
     }
-    
+
     if (listen(listenSocket, SOMAXCONN) == SOCKET_ERROR) {
         WriteLog("[Error] listen() failed on port " + std::to_string(localPort) + ", Err: " + std::to_string(WSAGetLastError()));
         closesocket(listenSocket);
         return 0;
     }
-    
+
     WriteLog("Listening on port " + std::to_string(localPort) + " -> Forwarding to " + std::to_string(targetPort));
 
     while (true) {
@@ -327,8 +335,8 @@ unsigned __stdcall StartListener(void* lpParam) {
             if (err != WSAEWOULDBLOCK && err != WSAECONNRESET) {
                 WriteLog("[Error] accept() failed. Err: " + std::to_string(err));
             }
-            Sleep(50); 
-            continue; 
+            Sleep(50);
+            continue;
         }
 
         if (InterlockedIncrement(&activeConnections) > MAX_CONNECTIONS) {
@@ -344,8 +352,9 @@ unsigned __stdcall StartListener(void* lpParam) {
 
         HANDLE hThread = (HANDLE)_beginthreadex(NULL, 0, ProxyWorker, param, 0, NULL);
         if (hThread != NULL) {
-            CloseHandle(hThread); 
-        } else {
+            CloseHandle(hThread);
+        }
+        else {
             WriteLog("Failed to create worker thread. Err: " + std::to_string(GetLastError()));
             closesocket(clientSocket);
             InterlockedDecrement(&activeConnections);
@@ -367,7 +376,7 @@ int main() {
         return 1;
     }
 
-    InitializeCriticalSection(&logMutex); 
+    InitializeCriticalSection(&logMutex);
 
     WSADATA wsaData;
     int wsaRes = WSAStartup(MAKEWORD(2, 2), &wsaData);
@@ -394,8 +403,8 @@ int main() {
 
     WSACleanup();
     DeleteCriticalSection(&logMutex);
-    
+
     if (hMutex) CloseHandle(hMutex);
-    
+
     return 0;
 }
