@@ -106,7 +106,7 @@ bool ConnectWithTimeout(SOCKET sock, sockaddr_in& targetAddr, int timeoutSeconds
     ioctlsocket(sock, FIONBIO, &iMode);
 
     int res = connect(sock, (SOCKADDR*)&targetAddr, sizeof(targetAddr));
-    
+
     if (res == 0) {
         outErrorCode = 0;
         iMode = 0; ioctlsocket(sock, FIONBIO, &iMode);
@@ -160,7 +160,7 @@ bool ConnectWithTimeout(SOCKET sock, sockaddr_in& targetAddr, int timeoutSeconds
         }
     }
     else if (res == 0) {
-        outErrorCode = WSAETIMEDOUT; 
+        outErrorCode = WSAETIMEDOUT;
     }
     else {
         outErrorCode = WSAGetLastError();
