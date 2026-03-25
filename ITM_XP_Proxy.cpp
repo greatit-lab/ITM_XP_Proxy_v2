@@ -1,4 +1,4 @@
-// ITM_XP_Proxy_V2.0.cpp : Target IP 마스킹(보안) 기능이 추가된 최종 배포본
+// ITM_XP_Proxy_v2.0.cpp : Target IP 마스킹(보안) 기능이 추가된 최종 배포본
 #define WIN32_LEAN_AND_MEAN
 #define _WINSOCK_DEPRECATED_NO_WARNINGS
 #pragma warning(disable: 4996)
@@ -356,9 +356,9 @@ unsigned __stdcall StartListener(void* lpParam) {
 }
 
 int main() {
-    SetConsoleTitleA("ITM Agent Proxy Server V3.10 (Security Patched)");
+    SetConsoleTitleA("ITM Agent Proxy Server v2.0");
 
-    HANDLE hMutex = CreateMutexA(NULL, FALSE, "ITM_XP_PROXY_MUTEX_V3_10_UNIQUE");
+    HANDLE hMutex = CreateMutexA(NULL, FALSE, "ITM_XP_PROXY_MUTEX_V2_0_UNIQUE");
     if (GetLastError() == ERROR_ALREADY_EXISTS) {
         std::cout << "[Error] ITM Proxy Server is already running!" << std::endl;
         std::cout << "Closing this instance in 3 seconds..." << std::endl;
@@ -378,8 +378,7 @@ int main() {
     }
 
     WriteLog("=================================================");
-    WriteLog("  [ITM Proxy Server V2.0] Started for Windows XP");
-    // ⭐️ IP 마스킹 함수 적용
+    WriteLog("  [ITM Proxy Server v2.0] Started for Windows XP");
     WriteLog("  Target IP : " + MaskIP(TARGET_IP));
     WriteLog("=================================================");
 
