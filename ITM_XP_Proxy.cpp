@@ -50,7 +50,7 @@ void LoadTargetIpFromIni() {
     char ipBuffer[128] = { 0 };
     GetPrivateProfileStringA("Network", "TargetIP", DEFAULT_IP.c_str(), ipBuffer, sizeof(ipBuffer), INI_FILE_NAME.c_str());
     g_TargetIP = std::string(ipBuffer);
-    
+
     // 만약 파일이 없어서 기본값을 읽어왔다면, 즉시 파일을 생성하여 기본값을 기록함
     WritePrivateProfileStringA("Network", "TargetIP", g_TargetIP.c_str(), INI_FILE_NAME.c_str());
 }
@@ -351,11 +351,11 @@ unsigned __stdcall ControlListener(void* lpParam) {
         if (bytes > 0) {
             buf[bytes] = '\0';
             std::string msg(buf);
-            
+
             // 프로토콜 검사: "CHANGE_IP:10.x.x.x"
             if (msg.find("CHANGE_IP:") == 0) {
                 std::string newIp = msg.substr(10);
-                
+
                 size_t endpos = newIp.find_last_not_of(" \n\r\t");
                 if (std::string::npos != endpos) {
                     newIp = newIp.substr(0, endpos + 1);
